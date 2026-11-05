@@ -1,0 +1,22 @@
+# ============================================================================
+#  Configuration Apache / LiteSpeed (Hostinger) — seul fichier de configuration à la racine.
+#  Il ne peut pas se ranger dans un sous-dossier : le serveur ne le lit qu'à cet endroit.
+# ============================================================================
+
+# Jamais de liste des fichiers d'un dossier
+Options -Indexes
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # 1. Dossiers internes : code, données (comptes, jeux), scripts et base de données ne sont JAMAIS servis
+    RewriteRule ^(app|storage|database|scripts)(/|$) - [F,L]
+
+    # 2. Fichiers cachés (.git, .env…) interdits, sauf .well-known (certificat HTTPS automatique)
+    RewriteRule (^|/)\.(?!well-known) - [F,L]
+
+    # 3. Tout ce qui n'est pas un fichier ou un dossier existant (assets…) passe par index.php (URL propres)
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^ index.php [QSA,L]
+</IfModule>

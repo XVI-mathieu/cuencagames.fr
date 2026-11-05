@@ -1,0 +1,368 @@
+/* =========================================================
+   « L'Arsenal » — scène cinématique pilotée par le scroll
+   Amélioration progressive : tout est inerte sans <html class="cinema-on">
+   (posé par le snippet de <head>, voir README.md).
+
+   Bandes de z-index :  0–9 monde · 10–19 teinte/cadrage · 20–29 texte narratif
+                        30–39 en-tête (le catalogue est en flux normal sous la scène) · 40+ bannière cookies (inchangée : 50)
+   Le JS n'écrit que des variables CSS ; les transforms finaux sont ici.
+   ========================================================= */
+
+/* ---------- Mode actif : le contenu serveur reste dans le DOM mais est masqué ---------- */
+html.cinema-on:not(.cinema-ready) .site-footer { visibility: hidden; }          /* pas de layout shift visible */
+html.cinema-on [data-cinema-source] { display: none !important; }
+html.cinema-on .site-header { position: fixed; inset: 0 0 auto 0; z-index: 35; }
+html.cinema-on body { background-color: var(--bg, #07080f); }
+
+/* ---------- Tokens de la scène (valeurs du site, plus une seule lueur chaude) ---------- */
+.cinematic-scroll {
+    --cin-ink: var(--bg, #07080f);
+    --cin-paper: var(--text, #e8ecff);
+    --cin-muted: var(--muted, #8a91b4);
+    --cin-surface: var(--surface, #111528);
+    --cin-surface-2: var(--surface-2, #171c35);
+    --cin-border: var(--border, #232a4d);
+    --cin-tint: #0d1020;
+    --cin-accent: #ffb45a;                 /* l'unique source de lumière chaude */
+    --cin-accent-soft: rgba(255, 180, 90, .22);
+    --cin-cold: #8fd8ff;                   /* lueur froide des portes du fond */
+    --cin-focus: var(--primary, #00e5ff);
+    --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 24px; --sp-6: 40px;
+    --shadow-glow: 0 0 44px rgba(255, 180, 90, .22);
+    --shadow-panel: 0 18px 60px rgba(0, 0, 0, .55);
+    --cin-cut: var(--cut, 14px);
+    --t-h1: clamp(2.1rem, 1.2rem + 3.6vw, 4rem);
+    --t-h2: clamp(1.45rem, 1rem + 1.8vw, 2.4rem);
+    --t-body: clamp(1.02rem, .95rem + .35vw, 1.22rem);
+    --t-kicker: clamp(.66rem, .6rem + .2vw, .76rem);
+    --hdr: 70px;                            /* hauteur de l'en-tête, réécrite par le JS */
+    --run: 4200px;                          /* course de scroll virtuelle, réécrite par le JS */
+
+    /* variables pilotées par cinema.js (valeurs de repos = état p = 0) */
+    --intro: 1; --intro-y: 0px;
+    --s-bg: 1; --s-far: 1; --s-mid: 1;
+    --pan: 0px; --mx: 0; --my: 0;
+    --door: .45; --door-s: 1;
+    --cab-dx: 0px; --cab-dy: 0px; --cab-s: 1; --cab-o: 1; --scr-on: .4; --glow: .35;
+    --a: 0; --a-y: 18px;
+    --b: 0; --b-y: 18px;
+    --tint-a: .1; --scrim: 1; --blur: 0px; --dof: 0px; --flash: 0; --motes: 1;
+    --rail: 0; --c: 0; --c-y: 18px;
+
+    position: relative;
+    height: calc(100vh + var(--run));
+    height: calc(100svh + var(--run));
+    background: var(--cin-ink);
+    color: var(--cin-paper);
+    font-family: var(--font-body, system-ui, sans-serif);
+}
+
+/* ---------- Stage ---------- */
+.cinema-stage {
+    position: sticky; top: 0;
+    height: 100vh; height: 100svh;
+    overflow: hidden; overflow: clip;
+    isolation: isolate;
+    background: var(--cin-ink);
+}
+
+/* ---------- Monde (z 0–9) ---------- */
+.cin-world { position: absolute; inset: 0; z-index: 0; opacity: 0; transition: opacity .5s ease; }
+html.cinema-world-ready .cin-world { opacity: 1; }
+.cin-depth { position: absolute; inset: 0; }
+.cin-depth.is-blurred { filter: blur(var(--blur)); will-change: filter; }
+
+.cin-layer {
+    position: absolute; left: -8%; top: -8%; width: 116%; height: 116%;   /* 16 % de bleed partout */
+    max-width: none; object-fit: cover; object-position: 50% 100%;       /* ancre bas + centre stable */
+    user-select: none; -webkit-user-drag: none; pointer-events: none;
+    will-change: transform;
+}
+.l-bg  { transform-origin: 50% 62%; transform: translate3d(calc(var(--mx) * 6px  + var(--pan) * .30), calc(var(--my) * 4px), 0) scale(var(--s-bg)); }
+.l-far { transform-origin: 50% 62%; transform: translate3d(calc(var(--mx) * 9px  + var(--pan) * .55), calc(var(--my) * 6px), 0) scale(var(--s-far)); }
+.l-mid { transform-origin: 50% 70%; transform: translate3d(calc(var(--mx) * -12px + var(--pan) * 1),   calc(var(--my) * -8px), 0) scale(var(--s-mid)); }
+
+/* Borne héros : l'origine est le centre de l'écran, donc le sujet ne dérive pas pendant le zoom */
+.cin-cab {
+    position: absolute; left: 50%; bottom: 7%;
+    height: min(54svh, 42vw); aspect-ratio: 5 / 7;
+    translate: -50% 0;
+    transform-origin: 50% 33.93%;
+    transform: translate3d(calc(var(--cab-dx) + var(--mx) * -18px), calc(var(--cab-dy) + var(--my) * -10px), 0) scale(var(--cab-s));
+    opacity: var(--cab-o);
+    will-change: transform, opacity;
+}
+.cin-cab img { position: absolute; display: block; user-select: none; -webkit-user-drag: none; pointer-events: none; }
+.cab-body { inset: 0; width: 100%; height: 100%; }
+.cab-screen { left: 22%; top: 17.857%; width: 56%; height: 32.143%; opacity: var(--scr-on); }
+.cab-glow {                       /* halo chaud autour de l'écran : la seule lumière de la scène */
+    position: absolute; left: -45%; top: -12%; width: 190%; height: 100%;
+    background: radial-gradient(closest-side at 50% 36%, rgba(255, 180, 90, .46), rgba(255, 180, 90, .12) 55%, transparent 78%);
+    opacity: var(--glow); pointer-events: none;
+}
+
+/* Battants : occluders de premier plan, ils pivotent sur leur bord intérieur */
+.l-doorL, .l-doorR { top: -8%; height: 116%; width: 58%; object-fit: fill; }
+.l-doorL { left: -8%;  transform-origin: 100% 50%; transform: translate3d(calc(var(--door) * -100% + var(--mx) * -24px), 0, 0) scale(var(--door-s)); }
+.l-doorR { left: 50%;  transform-origin: 0% 50%;   transform: translate3d(calc(var(--door) * 100%  + var(--mx) * -24px), 0, 0) scale(var(--door-s)); }
+
+/* ---------- Teinte et cadrage (z 10–19) ---------- */
+.cin-tint, .cin-scrim, .cin-vignette { position: absolute; inset: 0; pointer-events: none; }
+.cin-tint { z-index: 10; background: var(--cin-tint); opacity: var(--tint-a); }
+.cin-vignette { z-index: 12; left: -8%; top: -8%; width: 116%; height: 116%; max-width: none; object-fit: cover; opacity: .9; }
+.cin-scrim {
+    z-index: 11; opacity: var(--scrim);
+    background: linear-gradient(90deg, rgba(5, 6, 12, .86) 0%, rgba(5, 6, 12, .62) 34%, rgba(5, 6, 12, 0) 62%);
+}
+
+/* ---------- Texte narratif (z 20–29) ---------- */
+.cin-intro {
+    position: absolute; inset: 0; z-index: 22;
+    padding: calc(var(--hdr) + var(--sp-5)) max(22px, 6vw) calc(var(--sp-5) + 96px + env(safe-area-inset-bottom, 0px));   /* 96px : le bandeau cookies du site ne masque pas les CTA */
+    display: flex; flex-direction: column; justify-content: center;
+    opacity: var(--intro); transform: translate3d(0, var(--intro-y), 0);
+}
+.cin-intro-inner { max-width: min(540px, 100%); }
+.cin-logo { display: block; width: 64px; height: 64px; margin-bottom: var(--sp-4); filter: drop-shadow(0 0 14px var(--cin-accent-soft)); }
+.cinematic-scroll .eyebrow { color: var(--cin-accent); }
+.cinematic-scroll .eyebrow::before { background: var(--cin-accent); box-shadow: 0 0 10px var(--cin-accent); }
+.cin-intro h1 { font-size: var(--t-h1); font-weight: 700;   /* 700 : la graisse préchargée par le site */
+    line-height: 1.02; letter-spacing: .03em; color: #fff; filter: drop-shadow(0 4px 28px rgba(0, 0, 0, .65)); }
+.cin-lede { color: #c9cff0; font-size: var(--t-body); margin: var(--sp-3) 0 var(--sp-5); max-width: 34ch; }
+.cin-intro .stats { gap: var(--sp-3); margin-bottom: var(--sp-5); }
+.cin-intro .stat { min-width: 0; flex: 1 1 0; padding: 10px 16px; max-width: 170px; }
+.cin-intro .stat strong { font-size: clamp(1.3rem, 1rem + 1vw, 1.8rem); }
+.cin-intro .stat:nth-child(2) { border-left-color: var(--cin-accent); }
+.cin-cta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3) var(--sp-4); }
+.cin-skip { font-family: var(--font-display); font-size: .66rem; letter-spacing: .16em; text-transform: uppercase; color: var(--cin-muted); padding: 12px 4px; }
+.cin-skip:hover { color: #fff; }
+
+/* Boutons : mêmes composants que le site, la lueur chaude remplace le dégradé cyan/magenta ici seulement */
+.cinematic-scroll .btn { min-height: 44px; }
+.cinematic-scroll .btn-primary {
+    --btn-bg: var(--cin-accent); --btn-fg: #07080f; --btn-bd: transparent; background: var(--btn-bg);
+}
+.cinematic-scroll .btn-primary:hover { background: #ffc47e; filter: drop-shadow(0 0 14px var(--cin-accent-soft)); }
+.cinematic-scroll a:focus-visible, .cinematic-scroll button:focus-visible, .cinematic-scroll input:focus-visible,
+
+.cin-panel {
+    position: absolute; z-index: 24;
+    left: 50%; top: 50%;
+    width: min(var(--scr-w, 640px), calc(100% - 2 * var(--sp-4)));
+    translate: -50% -50%;
+    visibility: hidden;
+}
+.cin-panel.is-live { visibility: visible; }
+.cin-panel h2 { font-size: var(--t-h2); color: #fff; margin: 6px 0 var(--sp-3); }
+.cin-panel p { margin: 0 0 var(--sp-3); font-size: var(--t-body); color: #dfe3ff; max-width: 52ch; }
+.cin-kicker { font-family: var(--font-display); font-size: var(--t-kicker); font-weight: 700; letter-spacing: .26em; text-transform: uppercase; color: var(--cin-accent); margin: 0; }
+.cin-panel .cin-note { font-size: .98rem; color: #c9cff0; }
+
+/* Panneau A : posé sur l'écran allumé (ancre = centre de l'écran, calculée par le JS) */
+.cin-a {
+    top: var(--scr-cy, 50%);
+    min-height: var(--scr-h, 0px);
+    display: flex; flex-direction: column; justify-content: center;
+    padding: clamp(14px, 3vw, 34px);
+    background: rgba(5, 6, 13, .52);
+    opacity: var(--a);
+    transform: translate3d(0, var(--a-y), 0);
+}
+/* Panneau B : lisible sur la salle floutée */
+.cin-b {
+    top: calc(50% + var(--hdr) / 2);
+    padding: clamp(18px, 3.2vw, 40px);
+    background: linear-gradient(170deg, rgba(23, 28, 53, .94), rgba(17, 21, 40, .94) 60%);
+    border: 1px solid var(--cin-border);
+    box-shadow: var(--shadow-panel);
+    clip-path: polygon(0 0, calc(100% - 26px) 0, 100% 26px, 100% 100%, 26px 100%, 0 calc(100% - 26px));
+    width: min(720px, calc(100% - 2 * var(--sp-4)));
+    max-height: calc(100% - var(--hdr) - 2 * var(--sp-4));
+    overflow: auto;
+    opacity: var(--b);
+    transform: translate3d(0, var(--b-y), 0);
+}
+.cin-b ul { margin: 0 0 var(--sp-4); padding-left: 1.1em; color: #dfe3ff; font-size: var(--t-body); }
+.cin-b li { margin: 0 0 var(--sp-2); max-width: 56ch; }
+.cin-b strong { color: #fff; }
+.cin-b .btn { margin-top: var(--sp-2); }
+
+.cin-catalog {
+    /* mêmes tokens que la scène : le catalogue est un frère de .cinematic-scroll, il n'hérite pas */
+    --cin-ink: var(--bg, #07080f);
+    --cin-paper: var(--text, #e8ecff);
+    --cin-muted: var(--muted, #8a91b4);
+    --cin-surface: var(--surface, #111528);
+    --cin-surface-2: var(--surface-2, #171c35);
+    --cin-border: var(--border, #232a4d);
+    --cin-tint: #0d1020;
+    --cin-accent: #ffb45a;                 /* l'unique source de lumière chaude */
+    --cin-accent-soft: rgba(255, 180, 90, .22);
+    --cin-cold: #8fd8ff;                   /* lueur froide des portes du fond */
+    --cin-focus: var(--primary, #00e5ff);
+    --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 24px; --sp-6: 40px;
+    --shadow-glow: 0 0 44px rgba(255, 180, 90, .22);
+    --shadow-panel: 0 18px 60px rgba(0, 0, 0, .55);
+    --cin-cut: var(--cut, 14px);
+    --t-h1: clamp(2.1rem, 1.2rem + 3.6vw, 4rem);
+    --t-h2: clamp(1.45rem, 1rem + 1.8vw, 2.4rem);
+    --t-body: clamp(1.02rem, .95rem + .35vw, 1.22rem);
+    --t-kicker: clamp(.66rem, .6rem + .2vw, .76rem);
+}
+
+/* ---------- Panneau de fin + catalogue en grille (flux normal, sous la scène) ---------- */
+.cin-c {
+    top: calc(50% + var(--hdr) / 2);
+    width: min(720px, calc(100% - 2 * var(--sp-4)));
+    text-align: center; display: flex; flex-direction: column; align-items: center;
+    opacity: var(--c); transform: translate3d(0, var(--c-y), 0);
+}
+.cin-c h2 { font-size: clamp(2rem, 1.2rem + 3.2vw, 3.6rem); }
+.cin-c .btn { margin-top: var(--sp-3); }
+.cin-catalog {
+    position: relative; z-index: 1; background: var(--cin-ink); color: var(--cin-paper);
+    padding: clamp(36px, 6vw, 72px) max(22px, 6vw) 80px;
+    scroll-margin-top: 90px;
+}
+.cin-catalog > * { max-width: 1180px; margin-inline: auto; }
+.cin-catalog:focus { outline: none; }
+.cin-cat-head { display: flex; flex-direction: column; gap: var(--sp-3); margin-bottom: var(--sp-5); }
+.cin-cat-title { font-size: var(--t-h2); color: #fff; }
+.cin-tools { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3) var(--sp-4); }
+.cin-tools .chips { margin: 0; }
+.cin-tools .chip { min-height: 44px; }
+.cin-tools .chip.is-active { background: var(--cin-accent); color: #07080f; }
+.cin-search { flex: 1 1 200px; max-width: 320px; }
+.cin-search input { min-height: 44px; }
+.cin-count { color: var(--cin-muted); font-family: var(--font-display); font-size: .7rem; letter-spacing: .14em; text-transform: uppercase; white-space: nowrap; }
+.cin-grid { list-style: none; margin: 0 auto; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; }
+.cin-item { display: flex; min-width: 0; }
+.cin-item .card { width: 100%; }
+.cin-item .card-desc { display: -webkit-box; -webkit-line-clamp: 4; line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+.cin-item .card-actions .btn { min-height: 44px; }
+.cin-item .card-link:focus-visible { outline-offset: -3px; }
+.cin-item .card-foot { flex-wrap: wrap; }
+.cin-empty {
+    padding: var(--sp-5); max-width: 560px;
+    background: linear-gradient(170deg, var(--cin-surface-2), var(--cin-surface) 60%);
+    border: 1px dashed var(--cin-border);
+}
+.cin-empty p { margin: 0 0 var(--sp-3); font-size: var(--t-body); }
+/* 4 colonnes sur ordinateur (même à 125-150 % de zoom Windows), puis 3, 2 et 1 colonne sur petit écran */
+@media (max-width: 1250px) { .cin-grid { gap: 14px; } .cin-item .card-head { gap: 12px; } .cin-item .card-head h2 { font-size: .92rem; } .cin-item .card-desc { font-size: .92rem; } }
+@media (max-width: 880px) { .cin-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 640px) { .cin-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 440px) { .cin-grid { grid-template-columns: minmax(0, 1fr); } }
+
+.cin-sr { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* ---------- Petits écrans / pointeur grossier ---------- */
+@media (max-width: 700px), (pointer: coarse) {
+    .cin-cab { height: min(44svh, 78vw); bottom: 5%; }
+    .cin-logo { width: 52px; height: 52px; }
+    .cin-intro { justify-content: flex-start; padding-top: calc(var(--hdr) + var(--sp-4)); }
+    .cin-scrim { background: linear-gradient(180deg, rgba(5, 6, 12, .88) 0%, rgba(5, 6, 12, .7) 50%, rgba(5, 6, 12, 0) 85%); }
+    .cin-lede { margin-bottom: var(--sp-4); }
+    .cin-intro .stats { margin-bottom: var(--sp-4); }
+    /* « Jouer » est l'action principale ; le .exe (Windows uniquement) passe en secondaire */
+    .cin-item .btn-play { --btn-fg: #07080f; --btn-bd: var(--lime); background: var(--lime); }
+    .cin-item .btn-primary { --btn-bg: transparent; --btn-fg: var(--cin-paper); --btn-bd: var(--cin-border); background: transparent; }
+    .cin-item .card-foot { flex-direction: column; align-items: stretch; }
+    .cin-item .card-actions { flex-direction: row-reverse; }
+    .cin-item .card-actions .btn { flex: 1; }
+}
+@media (max-width: 700px) {
+    html.cinema-on .nav-links { gap: 14px; }
+    html.cinema-on .nav-links a { white-space: nowrap; font-size: .62rem; letter-spacing: .08em; }
+    html.cinema-on .nav { gap: 10px; }
+    .cin-intro .stats { display: grid; grid-template-columns: 1fr 1fr 1.45fr; }
+    .cin-intro .stat { padding: 8px 10px; max-width: none; }
+    .cin-intro .stat span { font-size: .6rem; letter-spacing: .05em; overflow-wrap: anywhere; }
+    .cin-cta { gap: var(--sp-2); }
+    .cin-cta .btn-lg { padding: 12px 14px; font-size: .7rem; letter-spacing: .08em; flex: 1 1 auto; }
+    .cin-skip { flex-basis: 100%; padding: 6px 4px; }
+}
+@media (pointer: coarse) { .l-bg, .l-far, .l-mid, .cin-cab, .l-doorL, .l-doorR { --mx: 0 !important; --my: 0 !important; } }
+
+/* Appareils modestes : teinte/opacité à la place du flou */
+html.cin-lite .cin-depth.is-blurred { filter: none; will-change: auto; }
+
+
+/* =========================================================
+   Mise en scène : ouverture, lumière, grain, poussière
+   (inactif hors <html class="cinema-on">, en pause hors écran)
+   ========================================================= */
+
+/* Ouverture : bandes de cinéma qui se retirent, titre mot à mot, éclat de lumière qui le traverse */
+.cin-bars { position: absolute; inset: 0; z-index: 13; pointer-events: none; opacity: 0;
+    background: linear-gradient(#000, #000) top / 100% 16svh no-repeat, linear-gradient(#000, #000) bottom / 100% 16svh no-repeat; }
+html.cinema-world-ready .cin-bars { animation: cin-bars 1.8s cubic-bezier(.7, 0, .2, 1) .1s both; }
+@keyframes cin-bars { from { opacity: 1; background-size: 100% 16svh, 100% 16svh; } to { opacity: 1; background-size: 100% 0, 100% 0; } }
+
+.cin-word { display: inline-block; opacity: 0; transform: translate3d(0, .45em, 0); filter: blur(8px); }
+@keyframes cin-word { to { opacity: 1; transform: none; filter: none; } }
+html.cinema-ready .cin-word {
+    background: linear-gradient(100deg, #fff 38%, #ffd9a0 50%, #fff 62%) 100% 0 / 260% 100% no-repeat;
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent;
+    animation: cin-word 1.1s cubic-bezier(.2, .7, .2, 1) calc(.45s + var(--i) * .22s) forwards,
+               cin-sweep 2.2s ease calc(1.2s + var(--i) * .25s) both; }
+@keyframes cin-sweep { from { background-position: 100% 0; } to { background-position: 0% 0; } }
+
+html.cinema-ready .cin-intro-inner > :not(.cin-title) { opacity: 0; animation: cin-rise .9s cubic-bezier(.2, .7, .2, 1) forwards; }
+html.cinema-ready .cin-intro-inner > :nth-child(1) { animation-delay: .1s; }
+html.cinema-ready .cin-intro-inner > :nth-child(2) { animation-delay: .25s; }
+html.cinema-ready .cin-intro-inner > :nth-child(4) { animation-delay: 1.0s; }
+html.cinema-ready .cin-intro-inner > :nth-child(5) { animation-delay: 1.15s; }
+html.cinema-ready .cin-intro-inner > :nth-child(6) { animation-delay: 1.3s; }
+@keyframes cin-rise { from { opacity: 0; transform: translate3d(0, 16px, 0); } to { opacity: 1; transform: none; } }
+
+/* Lumière : éclat chaud quand la borne passe la caméra */
+.cin-flash { position: absolute; inset: 0; z-index: 15; pointer-events: none; opacity: var(--flash);
+    background: radial-gradient(closest-side at 50% 52%, rgba(255, 205, 140, .6), rgba(255, 180, 90, .14) 62%, transparent); }
+
+/* Scintillement discret de l'écran : la borne vit */
+.cab-flicker { position: absolute; left: 22%; top: 17.857%; width: 56%; height: 32.143%; opacity: var(--glow); pointer-events: none; }
+.cab-flicker i { display: block; width: 100%; height: 100%; background: rgba(255, 210, 150, .14); animation: cin-flicker 4.3s linear infinite; }
+@keyframes cin-flicker { 0%, 100% { opacity: 0; } 6% { opacity: .9; } 9% { opacity: .25; } 31% { opacity: .1; } 33% { opacity: .8; } 36% { opacity: .2; } 62% { opacity: .35; } 78% { opacity: .05; } 80% { opacity: .7; } 83% { opacity: .15; } }
+
+/* Grain de pellicule et poussière en suspension */
+.cin-grain { position: absolute; inset: -50%; z-index: 14; pointer-events: none; opacity: .07;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .95 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    animation: cin-grain .9s steps(1) infinite; }
+@keyframes cin-grain { 0% { transform: translate(0, 0); } 17% { transform: translate(-5%, 3%); } 34% { transform: translate(4%, -6%); } 51% { transform: translate(-3%, 5%); } 68% { transform: translate(6%, 2%); } 85% { transform: translate(-6%, -3%); } }
+.cin-motes { position: absolute; inset: 0; z-index: 14; pointer-events: none; opacity: var(--motes); overflow: hidden; }
+.cin-motes i { position: absolute; left: var(--x); top: var(--y); width: var(--s); height: var(--s); border-radius: 50%;
+    background: #ffd9a0; opacity: 0; animation: cin-mote var(--d) ease-in-out var(--w) infinite; }
+@keyframes cin-mote { 0% { opacity: 0; transform: translate3d(0, 0, 0); } 20% { opacity: .55; } 80% { opacity: .35; } 100% { opacity: 0; transform: translate3d(var(--dx), -90px, 0); } }
+.cinematic-scroll.is-paused .cin-grain, .cinematic-scroll.is-paused .cin-motes i, .cinematic-scroll.is-paused .cab-flicker i { animation-play-state: paused; }
+html.cin-lite .cin-motes, html.cin-lite .cin-grain { display: none; }
+
+/* Profondeur de champ : la salle se défocalise quand la borne est cadrée */
+.cin-depth.is-dof .l-bg, .cin-depth.is-dof .l-far, .cin-depth.is-dof .l-mid { filter: blur(var(--dof)); }
+
+/* Texte des panneaux : chaque ligne entre avec un léger décalage */
+.cin-a > :nth-child(1), .cin-b > :nth-child(1) { --k: 6; }
+.cin-a > :nth-child(2), .cin-b > :nth-child(2) { --k: 14; }
+.cin-a > :nth-child(3), .cin-b > :nth-child(3) { --k: 24; }
+.cin-a > :nth-child(4), .cin-b > :nth-child(4) { --k: 32; }
+.cin-a > * { transform: translate3d(0, calc((1 - var(--a)) * var(--k, 0) * 1px), 0); }
+.cin-b > * { transform: translate3d(0, calc((1 - var(--b)) * var(--k, 0) * 1px), 0); }
+
+/* =========================================================
+   Version fixe (<html class="cinema-on cinema-static">) : reduced-motion ou viewport court
+   Le premier écran garde le décor et le titre ; aucune animation, aucun scroll virtuel.
+   ========================================================= */
+html.cinema-static .cinematic-scroll.is-static { height: auto; }
+html.cinema-static .is-static .cinema-stage { position: relative; height: 100vh; height: 100svh; min-height: 560px; }
+html.cinema-static .is-static .cin-panel { display: none; }
+html.cinema-static .cin-world { transition: none; }
+html.cinema-static .cin-bars, html.cinema-static .cin-grain, html.cinema-static .cin-motes,
+html.cinema-static .cin-flash, html.cinema-static .cab-flicker { display: none; }
+html.cinema-static .cin-word, html.cinema-static .cin-intro-inner > * { animation: none !important; opacity: 1 !important; transform: none !important; filter: none !important; }
+html.cinema-static .cin-word { background: none !important; -webkit-text-fill-color: #fff !important; color: #fff !important; }
+html.cinema-static .cin-intro-inner > .cin-title { filter: drop-shadow(0 4px 28px rgba(0, 0, 0, .65)) !important; }
+/* le titre, l'accroche et les compteurs sont déjà dans la scène : on ne garde du hero classique que filtres et recherche */
+html.cinema-static [data-cinema-static] .hero .eyebrow, html.cinema-static [data-cinema-static] .hero h1,
+html.cinema-static [data-cinema-static] .hero > p, html.cinema-static [data-cinema-static] .hero .stats { display: none; }
+html.cinema-static [data-cinema-static] { padding-top: 96px; }
+html.cinema-static #chips { scroll-margin-top: 100px; }

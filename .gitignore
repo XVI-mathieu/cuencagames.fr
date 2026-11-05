@@ -1,0 +1,12 @@
+# Identifiants reels de la base (jamais publies)
+app/Config/config.local.php
+
+# Donnees et fichiers du site (comptes, jeux deposes, executables)
+storage/*
+!storage/.htaccess
+
+# Fichiers systeme / executables
+._*
+.DS_Store
+Thumbs.db
+*.exe

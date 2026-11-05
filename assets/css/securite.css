@@ -1,0 +1,60 @@
+/**
+ * Styles de la page « Sécurité » (simulation pédagogique, app/Views/home/securite.php).
+ * Tous les sélecteurs commencent par .sec- ; les couleurs viennent des variables du thème (assets/css/style.css).
+ */
+/* Styles propres à la simulation (préfixe .sec-) — s'appuie sur les variables du thème */
+.sec-intro .note { font-size: 1rem; }
+.sec-stage {
+    position: relative; margin-top: 26px;
+    background: linear-gradient(170deg, var(--surface-2), var(--surface) 60%);
+    border: 1px solid var(--border); padding: 0; overflow: hidden;
+    clip-path: polygon(0 0, calc(100% - 26px) 0, 100% 26px, 100% 100%, 26px 100%, 0 calc(100% - 26px));
+    transition: box-shadow .3s;
+}
+.sec-stage.alert { box-shadow: inset 0 0 160px rgba(255,59,92,.28); animation: sec-pulse .9s ease-in-out infinite; }
+@keyframes sec-pulse { 50% { box-shadow: inset 0 0 90px rgba(255,59,92,.12); } }
+.sec-pad { padding: 30px; }
+
+/* Fausse marque GameZone (l'appât) */
+.sec-fakebrand { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+.sec-fakebrand .m { width: 40px; height: 40px; display: grid; place-items: center; font-size: 22px;
+    background: linear-gradient(135deg, var(--lime), var(--primary)); color: #07080f;
+    clip-path: polygon(22% 0,100% 0,100% 78%,78% 100%,0 100%,0 22%); }
+.sec-fakebrand .n { font-family: var(--font-display); font-weight: 800; font-size: 1.2rem; color: #fff; text-transform: uppercase; letter-spacing: .04em; }
+.sec-fakebrand .n span { color: var(--lime); }
+
+.sec-cookie { display: flex; gap: 14px; align-items: center; flex-wrap: wrap;
+    background: var(--bg-2); border: 1px solid var(--border); padding: 16px; margin-top: 18px; }
+.sec-cookie p { margin: 0; flex: 1; min-width: 220px; color: var(--muted); font-size: .98rem; }
+.sec-cookie .btns { display: flex; gap: 10px; }
+
+.sec-term { font-family: var(--font-display); font-size: .9rem; background: #05060d; border: 1px solid var(--border);
+    padding: 16px; margin-top: 18px; letter-spacing: .02em; }
+.sec-term .ln { display: flex; justify-content: space-between; gap: 12px; padding: 4px 0; opacity: 0; animation: sec-pop .3s forwards; }
+.sec-term .ln .k { display: flex; align-items: center; color: var(--muted); }
+.sec-term .ln .v { text-align: right; overflow-wrap: anywhere; color: var(--primary); font-weight: 700; }
+.sec-term .ln .v.hot { color: var(--danger); }
+@keyframes sec-pop { to { opacity: 1; } }
+.sec-dot { width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; flex-shrink: 0; }
+.sec-dot.s1 { background: var(--success-text); } .sec-dot.s2 { background: #ffc400; } .sec-dot.s3 { background: var(--danger); }
+.sec-legend { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 16px; color: var(--muted); font-family: var(--font-display); font-size: .62rem; letter-spacing: .1em; text-transform: uppercase; }
+.sec-legend span { display: inline-flex; align-items: center; }
+
+.sec-bar { height: 8px; background: var(--border); margin: 16px 0 6px; overflow: hidden; }
+.sec-bar > i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--danger), var(--accent)); transition: width .2s; }
+.sec-pct { text-align: right; color: var(--muted); font-family: var(--font-display); font-size: .7rem; }
+
+.sec-login { max-width: 400px; margin: 8px auto; }
+.sec-login label { display: block; color: var(--muted); font-family: var(--font-display); font-size: .64rem; letter-spacing: .14em; text-transform: uppercase; margin: 14px 0 6px; }
+.sec-countdown { text-align: center; font-family: var(--font-display); font-weight: 800; color: var(--danger); font-size: clamp(1.2rem,4vw,1.8rem); margin: 18px 0 4px; }
+
+.sec-lesson { border-left: 3px solid var(--success-text); background: rgba(125,255,176,.05); padding: 20px; margin-top: 18px; }
+.sec-lesson.warn { border-left-color: var(--danger); background: rgba(255,59,92,.06); }
+.sec-lesson.info { border-left-color: var(--primary); background: rgba(0,229,255,.05); }
+.sec-lesson h3 { font-family: var(--font-display); text-transform: uppercase; letter-spacing: .04em; margin: 0 0 10px; font-size: 1.05rem; }
+.sec-lesson.warn h3 { color: var(--danger); } .sec-lesson h3 { color: var(--success-text); } .sec-lesson.info h3 { color: var(--primary); }
+.sec-lesson p { margin: 0 0 10px; font-size: 1rem; }
+.sec-lesson ul { margin: 8px 0 0; padding-left: 20px; }
+.sec-stolen { font-family: var(--font-display); background: #05060d; border: 1px solid var(--border); padding: 14px; margin: 12px 0; }
+.sec-stolen div { padding: 3px 0; overflow-wrap: anywhere; }
+.sec-stolen .lbl { color: var(--muted); } .sec-stolen .val { color: var(--danger); font-weight: 700; }

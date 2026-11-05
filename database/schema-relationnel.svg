@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1130 840" font-family="Segoe UI, Arial, sans-serif" font-size="14">
+<rect width="1130" height="840" fill="#f8f9fc"/>
+<text x="30" y="28" font-size="20" font-weight="bold" fill="#3b5bdb">Schéma relationnel — cuencagames.fr (MySQL) : abonnements</text>
+<line x1="330" y1="105" x2="360" y2="105" stroke="#3b5bdb" stroke-width="2"/>
+<text x="334" y="99" fill="#c92a2a" font-weight="bold">1</text>
+<text x="342" y="99" fill="#c92a2a" font-weight="bold">N</text>
+<line x1="1060" y1="228" x2="1060" y2="300" stroke="#3b5bdb" stroke-width="2"/>
+<text x="1064" y="222" fill="#c92a2a" font-weight="bold">1</text>
+<text x="1042" y="294" fill="#c92a2a" font-weight="bold">N</text>
+<line x1="660" y1="520" x2="760" y2="460" stroke="#3b5bdb" stroke-width="2"/>
+<text x="664" y="514" fill="#c92a2a" font-weight="bold">1</text>
+<text x="742" y="454" fill="#c92a2a" font-weight="bold">N</text>
+<rect x="30" y="70" width="300" height="78" rx="6" fill="#ffffff" stroke="#3b5bdb" stroke-width="2"/>
+<rect x="30" y="70" width="300" height="30" rx="6" fill="#3b5bdb"/>
+<text x="42" y="91" fill="#ffffff" font-weight="bold" font-size="15">categorie</text>
+<text x="42" y="116" fill="#b8860b" font-weight="bold">PK code</text>
+<text x="42" y="138" fill="#1f2937" font-weight="normal">libelle</text>
+<rect x="360" y="40" width="300" height="364" rx="6" fill="#ffffff" stroke="#3b5bdb" stroke-width="2"/>
+<rect x="360" y="40" width="300" height="30" rx="6" fill="#3b5bdb"/>
+<text x="372" y="61" fill="#ffffff" font-weight="bold" font-size="15">projet</text>
+<text x="372" y="86" fill="#b8860b" font-weight="bold">PK id</text>
+<text x="372" y="108" fill="#1f2937" font-weight="normal">nom</text>
+<text x="372" y="130" fill="#2f9e44" font-weight="bold">FK code_categorie</text>
+<text x="372" y="152" fill="#1f2937" font-weight="normal">version</text>
+<text x="372" y="174" fill="#1f2937" font-weight="normal">description</text>
+<text x="372" y="196" fill="#1f2937" font-weight="normal">fichier</text>
+<text x="372" y="218" fill="#1f2937" font-weight="normal">nom_original</text>
+<text x="372" y="240" fill="#1f2937" font-weight="normal">taille</text>
+<text x="372" y="262" fill="#1f2937" font-weight="normal">fichier_html</text>
+<text x="372" y="284" fill="#1f2937" font-weight="normal">taille_html</text>
+<text x="372" y="306" fill="#1f2937" font-weight="normal">maintenance</text>
+<text x="372" y="328" fill="#1f2937" font-weight="normal">telechargements</text>
+<text x="372" y="350" fill="#1f2937" font-weight="normal">niveau_acces (0 à 3, trigger)</text>
+<text x="372" y="372" fill="#1f2937" font-weight="normal">cree_le</text>
+<text x="372" y="394" fill="#1f2937" font-weight="normal">modifie_le</text>
+<rect x="760" y="40" width="300" height="188" rx="6" fill="#ffffff" stroke="#3b5bdb" stroke-width="2"/>
+<rect x="760" y="40" width="300" height="30" rx="6" fill="#3b5bdb"/>
+<text x="772" y="61" fill="#ffffff" font-weight="bold" font-size="15">abonnement</text>
+<text x="772" y="86" fill="#b8860b" font-weight="bold">PK id</text>
+<text x="772" y="108" fill="#1f2937" font-weight="normal">code (UNIQUE)</text>
+<text x="772" y="130" fill="#1f2937" font-weight="normal">nom</text>
+<text x="772" y="152" fill="#1f2937" font-weight="normal">niveau (UNIQUE) : 1 à 3</text>
+<text x="772" y="174" fill="#1f2937" font-weight="normal">prix_mensuel</text>
+<text x="772" y="196" fill="#1f2937" font-weight="normal">description</text>
+<text x="772" y="218" fill="#1f2937" font-weight="normal">actif</text>
+<rect x="760" y="300" width="300" height="232" rx="6" fill="#ffffff" stroke="#3b5bdb" stroke-width="2"/>
+<rect x="760" y="300" width="300" height="30" rx="6" fill="#3b5bdb"/>
+<text x="772" y="321" fill="#ffffff" font-weight="bold" font-size="15">souscription</text>
+<text x="772" y="346" fill="#b8860b" font-weight="bold">PK id</text>
+<text x="772" y="368" fill="#2f9e44" font-weight="bold">FK id_utilisateur</text>
+<text x="772" y="390" fill="#2f9e44" font-weight="bold">FK id_abonnement</text>
+<text x="772" y="412" fill="#1f2937" font-weight="normal">nom_abonnement (trigger)</text>
+<text x="772" y="434" fill="#1f2937" font-weight="normal">niveau (trigger)</text>
+<text x="772" y="456" fill="#1f2937" font-weight="normal">prix (trigger)</text>
+<text x="772" y="478" fill="#1f2937" font-weight="normal">date_debut</text>
+<text x="772" y="500" fill="#1f2937" font-weight="normal">date_fin (trigger : +1 mois)</text>
+<text x="772" y="522" fill="#1f2937" font-weight="normal">statut : active | resiliee | terminee</text>
+<rect x="360" y="420" width="300" height="276" rx="6" fill="#ffffff" stroke="#3b5bdb" stroke-width="2"/>
+<rect x="360" y="420" width="300" height="30" rx="6" fill="#3b5bdb"/>
+<text x="372" y="441" fill="#ffffff" font-weight="bold" font-size="15">utilisateur</text>
+<text x="372" y="466" fill="#b8860b" font-weight="bold">PK id</text>
+<text x="372" y="488" fill="#1f2937" font-weight="normal">pseudo (UNIQUE)</text>
+<text x="372" y="510" fill="#1f2937" font-weight="normal">nom</text>
+<text x="372" y="532" fill="#1f2937" font-weight="normal">prenom</text>
+<text x="372" y="554" fill="#1f2937" font-weight="normal">email (UNIQUE)</text>
+<text x="372" y="576" fill="#1f2937" font-weight="normal">telephone (facultatif)</text>
+<text x="372" y="598" fill="#1f2937" font-weight="normal">mot_de_passe (hash)</text>
+<text x="372" y="620" fill="#1f2937" font-weight="normal">role (user | admin)</text>
+<text x="372" y="642" fill="#1f2937" font-weight="normal">droits (JSON)</text>
+<text x="372" y="664" fill="#1f2937" font-weight="normal">cree_le</text>
+<text x="372" y="686" fill="#1f2937" font-weight="normal">derniere_connexion</text>
+<text x="30" y="734" fill="#6b7280">PK = clé primaire · FK = clé étrangère · 1 / N = cardinalités. Un joueur peut avoir plusieurs souscriptions (historique) ; une seule est en cours.</text>
+<text x="30" y="758" fill="#6b7280">Suppression d'un joueur : ses souscriptions disparaissent (CASCADE). Le niveau d'accès d'un jeu (0 = gratuit) est comparé au niveau de l'abonnement en cours.</text>
+<text x="30" y="792" fill="#6b7280">Fonctions : fn_niveau_utilisateur · fn_peut_acceder — Procédures : sp_souscrire · sp_resilier · sp_abonnement_actuel · sp_souscriptions_utilisateur · sp_jeux_abonnement</text>
+<text x="30" y="814" fill="#6b7280">Triggers : trg_souscription_bi (prix, nom, niveau, date de fin) · trg_projet_bi / trg_projet_bu (niveau d'accès valide)</text>
+</svg>
