@@ -57,6 +57,7 @@
             <a href="<?= url('/securite') ?>">🛡️ Sécurité</a>
             <?php /* Le lien des abonnements passe par l'index réduit : index.php?controleur=abonnement&action=index */ ?>
             <a href="<?= e(url_reduit('abonnement', 'index')) ?>" class="nav-abo">⭐ Abonnements</a>
+            <a href="<?= e(url_reduit('panier', 'index')) ?>" class="nav-panier">🛒 Panier<?php if ($session['panierLignes'] > 0): ?> <span class="badge-panier"><?= (int) $session['panierLignes'] ?></span><?php endif; ?></a>
             <?php if ($session['connecte']): ?>
                 <a href="<?= url('/mon-compte') ?>" class="nav-user">👤 <?= e($session['pseudo']) ?></a>
                 <?php if ($session['tableauBord']): ?>

@@ -10,6 +10,7 @@ use App\Controllers\AccountController;
 use App\Controllers\AdminController;
 use App\Controllers\ApiController;
 use App\Controllers\HomeController;
+use App\Controllers\PanierController;
 use App\Controllers\ProjectController;
 
 // region Index réduit
@@ -18,7 +19,10 @@ use App\Controllers\ProjectController;
 // Seules les actions listées ici sont autorisées, avec la méthode HTTP indiquée.
 $router->reduit('accueil', HomeController::class, ['index' => 'GET']);
 $router->reduit('projet', ProjectController::class, ['show' => 'GET', 'play' => 'GET', 'download' => 'GET']);
-$router->reduit('abonnement', AbonnementController::class, ['index' => 'GET', 'souscrire' => 'POST', 'resilier' => 'POST']);
+$router->reduit('abonnement', AbonnementController::class, ['index' => 'GET', 'resilier' => 'POST']);
+$router->reduit('panier', PanierController::class, [
+    'index' => 'GET', 'ajouter' => 'POST', 'modifier' => 'POST', 'supprimer' => 'POST', 'vider' => 'POST', 'valider' => 'POST',
+]);
 
 // endregion
 
@@ -35,11 +39,17 @@ $router->post('/jeu/chrono', [ProjectController::class, 'playPulse']); // « bat
 
 // endregion
 
-// region Boutique : abonnements
+// region Boutique : abonnements et panier
 
 $router->get('/abonnements', [AbonnementController::class, 'index']);
-$router->post('/abonnements/souscrire/{id}', [AbonnementController::class, 'souscrire']);
 $router->post('/abonnements/resilier', [AbonnementController::class, 'resilier']);
+
+$router->get('/panier', [PanierController::class, 'index']);
+$router->post('/panier/ajouter', [PanierController::class, 'ajouter']);
+$router->post('/panier/modifier', [PanierController::class, 'modifier']);
+$router->post('/panier/supprimer', [PanierController::class, 'supprimer']);
+$router->post('/panier/vider', [PanierController::class, 'vider']);
+$router->post('/panier/valider', [PanierController::class, 'valider']);
 
 // endregion
 

@@ -31,7 +31,8 @@ class Controller
      * ni les modèles elles-mêmes (règle MVC).
      *
      * - $site    : identité du site et informations légales (config.php) et catégories ;
-     * - $session : visiteur connecté ou non, son pseudo, accès au tableau de bord, minutes d'essai sans compte.
+     * - $session : visiteur connecté ou non, son pseudo, accès au tableau de bord, minutes d'essai sans compte,
+     *              nombre de lignes de son panier.
      *
      * @return array{site: array, session: array}
      */
@@ -57,6 +58,7 @@ class Controller
                 'connecte'     => $connecte,
                 'pseudo'       => $connecte ? Auth::user()['username'] : '',
                 'tableauBord'  => Auth::can(Permissions::JEUX_LIRE),
+                'panierLignes' => Panier::nbLignes(),
                 // minutes de jeu gratuit pour un visiteur sans compte (0 : pas de limite ou visiteur connecté)
                 'essaiMinutes' => !$connecte && $limite > 0 ? (int) round($limite / 60) : 0,
             ],

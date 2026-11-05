@@ -3,12 +3,13 @@ namespace App\Controllers;
 
 use App\Core\Auth;
 use App\Core\Controller;
+use App\Core\Panier;
 use App\Models\Abonnement;
 use App\Models\Project;
-use PDOException;
 
 /**
- * Abonnements : page des formules (Essentiel, Premium, Ultime), souscription, résiliation et historique du joueur.
+ * Abonnements : page des formules (Essentiel, Premium, Ultime) avec leurs offres (durées), résiliation et historique du joueur.
+ * L'achat passe par le panier (PanierController).
  * Boutique de démonstration : aucun paiement réel, les prix sont fictifs.
  */
 class AbonnementController extends Controller
@@ -23,6 +24,7 @@ class AbonnementController extends Controller
         // pour chaque formule, la liste des jeux auxquels elle donne accès (procédure sp_jeux_abonnement)
         foreach ($plans as &$plan) {
             $plan['games'] = Abonnement::jeuxInclus($plan['id']);
+            $plan['offers'] = Abonnement::offres($plan);   // une offre par durée (1, 3, 6, 12 mois), prix calculés par la base
         }
         unset($plan);
 
@@ -33,6 +35,8 @@ class AbonnementController extends Controller
             'complet'    => Auth::hasFullAccess(),       // compte de gestion : accès à tous les jeux
             'actuel'     => $user ? Abonnement::actuel($user['id']) : null,
             'historique' => $user ? Abonnement::historique($user['id']) : [],
+            'commandes'  => $user ? Abonnement::commandes($user['id']) : [],
+            'quantiteMax' => Panier::QUANTITE_MAX,
             // jeux gratuits pour tous (niveau 0), pas besoin de formule
             'gratuits'   => array_values(array_filter(Project::all(), fn (array $p): bool => $p['level'] === 0)),
         ]);
@@ -40,32 +44,7 @@ class AbonnementController extends Controller
 
     // endregion
 
-    // region Souscription et résiliation
-
-    /** Souscrit une formule (connexion obligatoire) : l'abonnement en cours est remplacé immédiatement. */
-    public function souscrire(string $id): void
-    {
-        $this->verifyCsrf();
-        $user = $this->requireLogin('Connectez-vous (ou créez un compte) pour vous abonner.');
-
-        $plan = Abonnement::find((int) $id);
-        if (!$plan || !$plan['active']) {
-            flash('error', 'Cette formule n\'existe pas ou n\'est plus proposée.');
-            $this->redirect('/abonnements');
-        }
-
-        try {
-            Abonnement::souscrire($user['id'], $plan['id']);
-        } catch (PDOException $erreur) {
-            // SQLSTATE 45000 = règle métier refusée par le trigger (message prévu pour l'utilisateur)
-            $refus = ($erreur->errorInfo[0] ?? '') === '45000' ? (string) ($erreur->errorInfo[2] ?? '') : '';
-            flash('error', $refus !== '' ? 'Abonnement refusé : ' . $refus : 'L\'abonnement n\'a pas pu être enregistré. Réessayez plus tard.');
-            $this->redirect('/abonnements');
-        }
-
-        flash('success', 'Bienvenue dans la formule ' . $plan['name'] . ' ! Vos jeux sont débloqués pendant un mois.');
-        $this->redirect('/abonnements');
-    }
+    // region Résiliation
 
     /** Résilie l'abonnement en cours : pas de renouvellement, l'accès reste ouvert jusqu'à la date de fin. */
     public function resilier(): void

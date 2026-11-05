@@ -1,8 +1,13 @@
-# cuencagames.fr — site de jeux à abonnements (PHP MVC + MySQL)
+# cuencagames.fr — site de jeux à abonnements (PHP MVC + MySQL) — version 2
 
 Site en PHP avec une architecture **MVC** (Modèle – Vue – Contrôleur), une base **MySQL** accédée par **PDO** et aucun framework.
 Des **abonnements** (Essentiel, Premium, Ultime) donnent accès à plus ou moins de jeux : chaque jeu demande un niveau
 (0 = gratuit pour tous). Boutique de démonstration : prix fictifs, aucun paiement réel.
+
+**Nouveautés de la version 2 : le PANIER.** Le joueur choisit une formule et une durée (1, 3, 6 ou 12 mois, avec remise de fidélité),
+l'ajoute au panier, modifie les quantités, retire une ligne ou vide le panier, puis valide la commande : elle est enregistrée
+(tables `commande` et `ligne_commande`) et l'abonnement correspondant est souscrit. Les prix sont toujours calculés par la base
+(`fn_prix_offre`), jamais par PHP. Voir le § 6 bis.
 
 **Ce document est le seul document de la racine.** Il décrit chaque dossier : ce qu'il contient et comment c'est classé.
 
@@ -69,7 +74,8 @@ app/
 |---|---|
 | `HomeController.php` | Accueil, mentions légales, confidentialité (RGPD), page Sécurité. |
 | `ProjectController.php` | Fiche d'un jeu, jeu dans le navigateur (chrono d'essai sans compte), téléchargement ; **vérifie le niveau d'abonnement**. |
-| `AbonnementController.php` | Page des formules, souscription, résiliation. |
+| `AbonnementController.php` | Page des formules (une offre par durée), historique et commandes du joueur, résiliation. |
+| `PanierController.php` | **Panier** : affichage, ajout d'une offre, modification des quantités, retrait d'une ligne, vidage, validation de la commande. |
 | `AccountController.php` | Connexion (pseudo **ou** e-mail), inscription complète, vérification AJAX du pseudo / e-mail, « Mon compte » (export et suppression RGPD). |
 | `AdminController.php` | Tableau de bord web : ajout, modification, suppression de jeux, installateur Windows. |
 | `ApiController.php` | API JSON de l'ancienne application Windows « Gestionnaire Jeux ». |
@@ -82,6 +88,7 @@ app/
 | `Controller.php` | Classe mère des contrôleurs : affichage des vues, redirections, contrôles (connexion, droits, jeton CSRF), envoi de fichiers. |
 | `ModelePDO.php` | Classe mère des modèles : connexion PDO unique, `getLesTuples`, `appelerProcedure`, `appelerFonction`, transactions. |
 | `Auth.php` | Qui est connecté, ses droits, **son niveau d'abonnement** (`Auth::level()`). |
+| `Panier.php` | **Panier en session** (classe statique) : `ajouter`, `modifier`, `supprimer`, `vider`, `totalMois`… Il ne stocke que « formule-durée => quantité » : les prix sont relus en base. |
 | `Permissions.php` | Catalogue des droits (jeux, comptes, abonnements) et profils prédéfinis. |
 | `Config.php` | Lecture de la configuration (`config.php` + `config.local.php` + variables d'environnement). |
 | `Csrf.php` | Jeton secret des formulaires. |
@@ -93,7 +100,7 @@ app/
 |---|---|
 | `Project.php` | Table `projet` (jeux). Validation et gestion des fichiers d'un jeu. |
 | `User.php` | Table `utilisateur` : nom, prénom, e-mail, téléphone, pseudo, mot de passe haché, rôle, droits. |
-| `Abonnement.php` | Tables `abonnement` et `souscription`, via les procédures `sp_souscrire`, `sp_resilier`, `sp_abonnement_actuel`, `sp_souscriptions_utilisateur`, `sp_jeux_abonnement` et la fonction `fn_niveau_utilisateur`. |
+| `Abonnement.php` | Tables `abonnement`, `souscription`, `commande` et `ligne_commande`, via les procédures `sp_creer_commande`, `sp_ajouter_ligne_commande`, `sp_valider_commande`, `sp_souscrire`, `sp_resilier`, `sp_abonnement_actuel`, `sp_souscriptions_utilisateur`, `sp_commandes_utilisateur`, `sp_jeux_abonnement` et les fonctions `fn_niveau_utilisateur`, `fn_prix_offre`, `fn_total_commande`. |
 
 ### `app/Views/` — vues (chaque fichier commence par un commentaire qui liste ses variables)
 | Élément | Contenu |
@@ -101,7 +108,8 @@ app/
 | `layout.php` | Mise en page commune : en-tête, menu, messages, pied de page, bandeau cookies. |
 | `home/` | Accueil (cartes, filtres), mentions légales, confidentialité, page Sécurité. |
 | `projects/` | Fiche d'un jeu, écran « temps d'essai écoulé ». |
-| `abonnements/` | Page des formules, abonnement en cours, historique. |
+| `abonnements/` | Page des formules (choix de la durée et de la quantité), abonnement en cours, historique, commandes. |
+| `panier/` | Page du panier : lignes, quantités, récapitulatif, validation. |
 | `account/` | Connexion + inscription (deux onglets), « Mon compte ». |
 | `admin/` | Tableau de bord, formulaire de jeu (`form.php` + élément réutilisable `_source-fichier.php`), installation. |
 | `partials/` | Éléments réutilisables (liste d'erreurs). |
@@ -114,7 +122,7 @@ app/
 ```
 assets/
 ├── css/       style.css (thème), securite.css (page Sécurité)
-├── js/        accueil.js (filtres), connexion.js (onglets + vérifications AJAX), cookies.js (bandeau), securite.js (simulation)
+├── js/        accueil.js (filtres), connexion.js (onglets + vérifications AJAX), cookies.js (bandeau), securite.js (simulation), panier.js (quantités, confirmation du vidage)
 ├── images/    logo.png, favicon.ico
 ├── fonts/     polices hébergées sur le site (aucun appel à Google : RGPD)
 └── cinema/    scène animée de l'accueil (cinema.js, cinema.css, calques SVG) et sa documentation (README.md, MANIFEST.md)
@@ -127,7 +135,7 @@ Aucun code PHP ici : ce sont les seuls fichiers servis directement par le serveu
 
 | Fichier | Rôle |
 |---|---|
-| `schema.sql` | **Tables** (`categorie`, `utilisateur`, `abonnement`, `projet`, `souscription`), **fonctions** (`fn_niveau_utilisateur`, `fn_peut_acceder`), **procédures** de consultation et d'action, **triggers** (`trg_souscription_bi`, `trg_projet_bi/bu`). Rejouable sans perte de données. |
+| `schema.sql` | **Tables** (`categorie`, `utilisateur`, `abonnement`, `projet`, `commande`, `ligne_commande`, `souscription`), **fonctions** (`fn_niveau_utilisateur`, `fn_peut_acceder`, `fn_prix_offre`, `fn_total_commande`), **procédures** de consultation et d'action, **triggers** (`trg_souscription_bi`, `trg_commande_bi`, `trg_ligne_commande_bi`, `trg_projet_bi/bu`). Rejouable sans perte de données ; une base de la version 1 est migrée automatiquement (colonnes `duree_mois` et `id_commande` de `souscription`). |
 | `installer.php` | Installe le schéma ; avec `--migrer`, importe les anciens fichiers JSON (`storage/*.json`). |
 | `schema-relationnel.svg` | Schéma relationnel graphique (tables, clés, cardinalités). |
 
@@ -148,6 +156,21 @@ storage/
 ```
 Ne jamais publier ce dossier sur GitHub (`.gitignore`) : il contient des comptes et des fichiers volumineux.
 
+## 6 bis. Le panier (version 2)
+
+```
+abonnements ──► [Ajouter au panier] ──► Panier (session) ──► [Valider] ──► commande + lignes ──► souscription
+  durée, quantité   POST /panier/ajouter    Panier::ajouter       PanierController::valider     sp_creer_commande     trg_souscription_bi
+                                            modifier/supprimer/    (connexion obligatoire,        sp_ajouter_ligne_commande
+                                            vider                   transaction)                   sp_valider_commande
+```
+- Adresses : `/panier` (ou `index.php?controleur=panier&action=index`), `/panier/ajouter`, `/panier/modifier`, `/panier/supprimer`,
+  `/panier/vider`, `/panier/valider` (toutes en POST sauf l'affichage, protégées par le jeton CSRF).
+- Règles (doublées côté PHP et côté base) : une seule formule par panier (en ajouter une autre remplace le contenu), 1 à 12 exemplaires
+  d'une durée, 36 mois au maximum par commande. Le trigger `trg_ligne_commande_bi` refuse une durée non proposée et recopie le prix
+  de `fn_prix_offre` ; `trg_souscription_bi` fixe la durée et le montant de l'abonnement d'après la commande validée.
+- Le panier disparaît avec la session ; seules les commandes validées sont enregistrées.
+
 ## 7. Dossier `scripts/` — développement
 `demarrer.bat` : lance le site en local sur http://localhost:8000 (PHP 8.1+ avec l'extension `pdo_mysql`).
 
@@ -167,6 +190,9 @@ Ne jamais publier ce dossier sur GitHub (`.gitignore`) : il contient des comptes
 
 **En local (Windows)** : WAMP (PHP + MariaDB) → créer une base → copier `app/Config/config.local.example.php` en `config.local.php`
 et le remplir → `php database/installer.php --migrer` → `scripts/demarrer.bat`.
+
+**Mise à jour depuis la version 1** : remplacer les fichiers du site (sans écraser `storage/` ni `config.local.php`) puis rejouer
+`database/schema.sql` (phpMyAdmin → *Importer*, ou `php database/installer.php`) : il ajoute les nouvelles tables et colonnes sans rien perdre.
 
 **Chez l'hébergeur (Hostinger)** :
 1. hPanel → *Bases de données* : créer la base et son utilisateur.

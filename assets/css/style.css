@@ -433,3 +433,72 @@ textarea { resize: vertical; }
 .plan ul { margin: 8px 0 0; padding-left: 18px; max-height: 180px; overflow-y: auto; }
 .plan form { margin-top: auto; }
 .plan .btn { margin-top: auto; }
+/* ---------- Boutique : panier (version 2) ---------- */
+
+/* Listes déroulantes et nombres, comme les champs texte */
+select, input[type="number"] {
+    width: 100%; padding: 12px 14px;
+    background: rgba(7, 8, 15, .6); color: var(--text);
+    border: 1px solid var(--border); border-radius: 0;
+    font: inherit; font-size: 1rem;
+    transition: border-color .2s, box-shadow .2s;
+}
+select:focus, input[type="number"]:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(0, 229, 255, .15), 0 0 18px rgba(0, 229, 255, .2); }
+select option { background: var(--bg-2); color: var(--text); }
+
+/* Lien « Panier » du menu et pastille du nombre de lignes */
+.badge-panier {
+    display: inline-block; min-width: 20px; padding: 1px 6px; margin-left: 4px; text-align: center;
+    font-family: var(--font-display); font-size: .62rem; font-weight: 800; line-height: 1.6;
+    color: #07080f; background: var(--lime); border-radius: 10px;
+}
+
+/* Formulaire d'ajout au panier (dans la carte d'une formule) */
+.plan-form { display: flex; flex-direction: column; gap: 12px; }
+
+/* Page du panier */
+.panier-table input.qte { width: 84px; padding: 8px 10px; }
+.panier-aide { margin: 12px 0 0; font-size: .95rem; }
+.panier-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 18px; }
+.panier-recap { margin-top: 26px; }
+.panier-recap h2 { font-size: 1.1rem; color: #fff; margin-bottom: 8px; }
+.panier-total { font-family: var(--font-display); font-size: 1.5rem; font-weight: 800; color: var(--lime); }
+.panier-vide { text-align: center; }
+.panier-vide .btn { margin-top: 8px; }
+
+/* Titres de section placés autour des tableaux (historique, commandes) : un peu d'air au-dessus et en dessous */
+.table-wrap + h2 { margin-top: 34px; }
+h2 + .table-wrap { margin-top: 14px; }
+
+/* Menu : avec le lien « Panier », les libellés restent sur une ligne et l'espacement se resserre sur les écrans moyens */
+.nav-links a, .link-button, .brand-name { white-space: nowrap; }
+@media (max-width: 1240px) {
+    .nav-links { gap: 14px; }
+    .nav-links a, .link-button { letter-spacing: .08em; }
+}
+@media (max-width: 1020px) { .brand-name { display: none; } }
+
+@media (max-width: 1320px) {
+    .nav-links { gap: 12px; }
+    .nav-links a, .link-button { font-size: .7rem; letter-spacing: .06em; }
+}
+
+/* Panier sur smartphone : le tableau devient une pile de fiches (une par offre) au lieu de défiler de côté */
+@media (max-width: 640px) {
+    .panier-table, .panier-table tbody, .panier-table tr, .panier-table td { display: block; width: 100%; }
+    .panier-table thead { display: none; }
+    .panier-table tr { padding: 12px 18px; border-bottom: 1px solid var(--border); }
+    .panier-table td { display: flex; align-items: center; justify-content: space-between; gap: 12px;
+        padding: 7px 0 !important; border: 0; white-space: normal; text-align: right; }
+    .panier-table td::before { content: attr(data-label); color: var(--muted); font-family: var(--font-display);
+        font-size: .62rem; letter-spacing: .12em; text-transform: uppercase; text-align: left; }
+    .panier-table td.actions::before { content: none; }
+    .panier-table td.actions { justify-content: flex-end; }
+    .panier-table input.qte { width: 96px; }
+}
+
+/* Écrans moyens (tablette) : le menu passe sur plusieurs lignes plutôt que de faire défiler la page de côté */
+@media (max-width: 1020px) {
+    .nav { height: auto; padding: 10px 0; }
+    .nav-links { flex-wrap: wrap; justify-content: flex-end; gap: 6px 14px; }
+}

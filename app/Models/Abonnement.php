@@ -2,6 +2,7 @@
 namespace App\Models;
 
 use App\Core\ModelePDO;
+use App\Core\Panier;
 
 /**
  * Modèle « Abonnement » : formules payantes (Essentiel, Premium, Ultime) et abonnements souscrits par les joueurs.
@@ -31,6 +32,37 @@ class Abonnement extends ModelePDO
     {
         $sql = 'SELECT * FROM abonnement' . ($seulementActives ? ' WHERE actif = 1' : '') . ' ORDER BY niveau';
         return array_map(self::hydraterPlan(...), self::getLesTuples($sql));
+    }
+
+    /**
+     * Prix d'une offre (formule + durée en mois), remise de fidélité comprise : fonction stockée fn_prix_offre.
+     * Retourne null si la formule n'existe pas ou si la durée n'est pas proposée.
+     */
+    public static function prixOffre(int $idAbonnement, int $dureeMois): ?float
+    {
+        $prix = self::appelerFonction('fn_prix_offre', [$idAbonnement, $dureeMois]);
+        return $prix === null ? null : (float) $prix;
+    }
+
+    /**
+     * Les offres d'une formule, une par durée proposée (1, 3, 6, 12 mois), avec leur prix et leur remise.
+     *
+     * @return array<int,array{months:int,label:string,price:float,discount:int}>
+     */
+    public static function offres(array $plan): array
+    {
+        $offres = [];
+        foreach (Panier::DUREES as $mois) {
+            $prix = self::prixOffre($plan['id'], $mois);
+            $sansRemise = $plan['price'] * $mois;
+            $offres[] = [
+                'months'   => $mois,
+                'label'    => Panier::libelleDuree($mois),
+                'price'    => (float) $prix,
+                'discount' => $sansRemise > 0 ? (int) round((1 - $prix / $sansRemise) * 100) : 0,
+            ];
+        }
+        return $offres;
     }
 
     /** Une formule par son identifiant (null si elle n'existe pas). */
@@ -95,16 +127,39 @@ class Abonnement extends ModelePDO
     // region Souscription et résiliation
 
     /**
-     * Souscrit une formule pour un joueur (procédure sp_souscrire) : l'abonnement en cours est remplacé immédiatement.
-     * Retourne le numéro de la souscription. Une formule inconnue ou retirée est refusée par la base (PDOException 45000).
+     * Valide un panier : crée la commande (sp_creer_commande), y ajoute une ligne par offre (sp_ajouter_ligne_commande),
+     * puis la valide (sp_valider_commande), ce qui souscrit l'abonnement et remplace celui en cours.
+     * Le tout est une transaction : si la base refuse une règle (trigger, SQLSTATE 45000), rien n'est enregistré.
+     *
+     * @param array<string,int> $lignes « dureeMois » => quantité
+     * @return int Numéro de la commande.
      */
-    public static function souscrire(string $idUtilisateur, int $idAbonnement): int
+    public static function commander(string $idUtilisateur, int $idAbonnement, array $lignes): int
     {
-        return (int) self::transaction(function () use ($idUtilisateur, $idAbonnement): int {
-            // procédure d'action avec un paramètre de sortie (@id_souscription), relu juste après
-            self::executerRequete('CALL sp_souscrire(?, ?, @id_souscription)', [$idUtilisateur, $idAbonnement])->closeCursor();
-            return (int) self::getUneValeur('SELECT @id_souscription');
+        return (int) self::transaction(function () use ($idUtilisateur, $idAbonnement, $lignes): int {
+            // procédures d'action avec paramètre de sortie (@id_commande), relu juste après
+            self::executerRequete('CALL sp_creer_commande(?, ?, @id_commande)', [$idUtilisateur, $idAbonnement])->closeCursor();
+            $idCommande = (int) self::getUneValeur('SELECT @id_commande');
+
+            foreach ($lignes as $dureeMois => $quantite) {
+                self::appelerProcedureAction('sp_ajouter_ligne_commande', [$idCommande, (int) $dureeMois, (int) $quantite]);
+            }
+
+            self::executerRequete('CALL sp_valider_commande(?, @id_souscription)', [$idCommande])->closeCursor();
+            return $idCommande;
         });
+    }
+
+    /** Commandes validées d'un joueur, de la plus récente à la plus ancienne (procédure sp_commandes_utilisateur). */
+    public static function commandes(string $idUtilisateur): array
+    {
+        return array_map(
+            static fn (array $ligne): array => [
+                'id' => (int) $ligne['id'], 'name' => $ligne['nom_abonnement'], 'months' => (int) $ligne['mois_total'],
+                'total' => (float) $ligne['total'], 'date' => self::versIso($ligne['cree_le']),
+            ],
+            self::appelerProcedure('sp_commandes_utilisateur', [$idUtilisateur])
+        );
     }
 
     /** Résilie l'abonnement en cours (procédure sp_resilier) : pas de renouvellement, accès jusqu'à la date de fin. */
@@ -143,6 +198,7 @@ class Abonnement extends ModelePDO
             'name'   => $ligne['nom_abonnement'],
             'level'  => (int) $ligne['niveau'],
             'price'  => (float) $ligne['prix'],
+            'months' => (int) $ligne['duree_mois'],
             'start'  => self::versIso($ligne['date_debut']),
             'end'    => self::versIso($ligne['date_fin']),
             'status' => $etat,
